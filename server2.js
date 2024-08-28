@@ -1,18 +1,17 @@
-const { createServer } = require("node:http");
-const querystring = require("querystring");
 const fs = require("fs");
 const express = require("express");
 
-const hostname = "127.0.0.1";
+const app = express();
 const port = process.env.PORT || 1337;
+
+// const hostname = "127.0.0.1";
 
 function respondText(req, res) {
   res.setHeader("Content-Type", "text/plain");
   res.end("hi");
 }
 function respondJson(req, res) {
-  res.setHeader("Content-Type", "application/json");
-  res.end(JSON.stringify({ text: "hi", numbers: [1, 2, 3] }));
+  res.json({ text: "hi", numbers: [1, 2, 3] });
 }
 
 function respondNotFound(req, res) {
@@ -21,36 +20,38 @@ function respondNotFound(req, res) {
 }
 
 function respondEcho(req, res) {
-  const { input = "" } = querystring.parse(
-    req.url.split("?").slice(1).join("")
-  );
+  const { input = "" } = req.query;
 
-  res.setHeader("Content-Type", "application/json");
-  res.end(
-    JSON.stringify({
-      normal: input,
-      shouty: input.toUpperCase(),
-      characterCount: input.length,
-      backwards: input.split("").reverse().join(""),
-    })
-  );
+  res.json({
+    normal: input,
+    shouty: input.toUpperCase(),
+    characterCount: input.length,
+    backwards: input.split("").reverse().join(""),
+  });
 }
 
 function respondStatic(req, res) {
-  const filename = `${__dirname}/public${req.url.split("/static")[1]}`;
+  const filename = `${__dirname}/public/${req.params[0]}`;
   fs.createReadStream(filename)
     .on("error", () => respondNotFound(req, res))
     .pipe(res);
 }
 
-const server = createServer(function (req, res) {
-  if (req.url === "/") return respondText(req, res);
-  if (req.url === "/json") return respondJson(req, res);
-  if (req.url.match(/^\/echo/)) return respondEcho(req, res);
-  if (req.url.match(/^\/static/)) return respondStatic(req, res);
-  respondNotFound(req, res);
-});
+app.get("/", respondText);
+app.get("/json", respondJson);
+app.get("/echo", respondEcho);
+app.get("/static/*", respondStatic);
 
-server.listen(port, hostname, () => {
-  console.log(`Server running at http://localhost:${port}/`);
-});
+app.listen(port, () => console.log(`Server listening on port ${port}`));
+
+// const server = createServer(function (req, res) {
+//   if (req.url === "/") return respondText(req, res);
+//   if (req.url === "/json") return respondJson(req, res);
+//   if (req.url.match(/^\/echo/)) return respondEcho(req, res);
+//   if (req.url.match(/^\/static/)) return respondStatic(req, res);
+//   respondNotFound(req, res);
+// });
+
+// server.listen(port, hostname, () => {
+//   console.log(`Server running at http://localhost:${port}/`);
+// });
